@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/libraryFragment">
+
+    <fragment
+        android:id="@+id/libraryFragment"
+        android:name="com.example.dogalseslikitap.ui.library.LibraryFragment"
+        android:label="@string/library_title">
+        <action
+            android:id="@+id/action_library_to_reader"
+            app:destination="@id/readerFragment" />
+        <action
+            android:id="@+id/action_library_to_settings"
+            app:destination="@id/settingsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/readerFragment"
+        android:name="com.example.dogalseslikitap.ui.reader.ReaderFragment"
+        android:label="@string/book_reader">
+        <argument
+            android:name="bookId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.dogalseslikitap.ui.settings.SettingsFragment"
+        android:label="@string/settings" />
+</navigation>
