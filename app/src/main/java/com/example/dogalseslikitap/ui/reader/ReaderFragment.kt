@@ -21,7 +21,7 @@ class ReaderFragment : Fragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentReaderBinding.inflate(inflater, container, false)
         ttsManager = TtsManager(requireContext())
@@ -43,20 +43,20 @@ class ReaderFragment : Fragment() {
             viewModel.progressText.collect { binding.txtProgress.text = it }
         }
 
-        binding.btnPlay.setOnClickListener { speakCurrent() }
-        binding.btnPause.setOnClickListener { /* Pausing handled by TTS engines that support it */ }
+        binding.btnPlay.setOnClickListener { speakCurrent(false) }
+        binding.btnPause.setOnClickListener { ttsManager.stop() }
         binding.btnStop.setOnClickListener { ttsManager.stop() }
         binding.btnNext.setOnClickListener {
             viewModel.nextSentence()
-            speakCurrent()
+            speakCurrent(true)
         }
         binding.btnPrev.setOnClickListener {
             viewModel.previousSentence()
-            speakCurrent()
+            speakCurrent(true)
         }
     }
 
-    private fun speakCurrent() {
+    private fun speakCurrent(auto: Boolean) {
         val text = viewModel.currentSentence()
         if (text.isBlank()) {
             Toast.makeText(requireContext(), getString(R.string.empty_content), Toast.LENGTH_SHORT).show()
@@ -64,16 +64,25 @@ class ReaderFragment : Fragment() {
         }
         viewLifecycleOwner.lifecycleScope.launch {
             val settings = viewModel.currentSettings.value
-            ttsManager.speak(text, settings, onDone = {
-                viewModel.saveProgress()
-            }, onError = {
-                Toast.makeText(requireContext(), getString(R.string.error_tts), Toast.LENGTH_LONG).show()
-            })
+            ttsManager.speak(
+                text,
+                settings,
+                onDone = {
+                    viewModel.saveProgress()
+                    if (auto) {
+                        viewModel.nextSentence()
+                    }
+                },
+                onError = {
+                    Toast.makeText(requireContext(), getString(R.string.error_tts), Toast.LENGTH_LONG).show()
+                }
+            )
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        ttsManager.shutdown()
         _binding = null
     }
 }

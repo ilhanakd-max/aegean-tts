@@ -8,127 +8,114 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingBottom="16dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/provider_title"
-            android:textStyle="bold"
-            android:textSize="16sp" />
+            android:text="@string/engine_label"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-        <RadioGroup
-            android:id="@+id/groupProvider"
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/groupEngine"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true">
 
-            <RadioButton
-                android:id="@+id/radioSystem"
-                android:layout_width="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEngineSystem"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/provider_system" />
+                android:layout_weight="1"
+                android:text="@string/engine_system" />
 
-            <RadioButton
-                android:id="@+id/radioOpenAi"
-                android:layout_width="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEngineRhvoice"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/provider_openai" />
-
-            <RadioButton
-                android:id="@+id/radioAzure"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/provider_azure" />
-        </RadioGroup>
+                android:layout_weight="1"
+                android:text="@string/engine_rhvoice" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/tts_speed" />
+            android:layout_marginTop="16dp"
+            android:text="@string/voice_label"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:hint="@string/voice_label"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense">
+
+            <AutoCompleteTextView
+                android:id="@+id/dropdownVoice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/speed_label"
+            android:textStyle="bold" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderSpeed"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:valueFrom="0.5"
-            android:valueTo="1.5"
-            android:stepSize="0.1"
+            android:valueTo="2.0"
+            android:stepSize="0.05"
             android:value="1.0" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/tts_pitch" />
+            android:layout_marginTop="12dp"
+            android:text="@string/pitch_label"
+            android:textStyle="bold" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderPitch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:valueFrom="0.5"
-            android:valueTo="1.5"
-            android:stepSize="0.1"
+            android:valueTo="2.0"
+            android:stepSize="0.05"
             android:value="1.0" />
 
-        <com.google.android.material.textfield.TextInputLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/openai_key">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputOpenAiKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/openai_base">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputOpenAiBase"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/azure_key">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputAzureKey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/azure_region">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputAzureRegion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="12dp"
+            android:text="@string/reader_hint" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Kaydet"
+            android:layout_marginTop="12dp"
             style="@style/Widget.Material3.Button"
-            android:layout_marginTop="8dp" />
+            android:text="@string/save" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTest"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/test_voice"
+            android:layout_marginTop="8dp"
             style="@style/Widget.Material3.Button"
-            android:layout_marginTop="8dp" />
+            android:text="@string/test_voice" />
 
     </LinearLayout>
 </ScrollView>

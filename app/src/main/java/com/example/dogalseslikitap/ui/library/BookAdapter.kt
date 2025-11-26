@@ -3,6 +3,7 @@ package com.example.dogalseslikitap.ui.library
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.example.dogalseslikitap.R
 import com.example.dogalseslikitap.data.db.BookEntity
 import com.example.dogalseslikitap.databinding.ItemBookBinding
 import com.example.dogalseslikitap.model.BookType
@@ -32,8 +33,12 @@ class BookAdapter(private val onClick: (BookEntity) -> Unit) :
     inner class BookViewHolder(private val binding: ItemBookBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(book: BookEntity) {
             binding.txtTitle.text = book.title
-            binding.txtPath.text = book.path
-            val iconRes = when (BookType.fromPath(book.path)) {
+            val type = BookType.fromPath(book.path)
+            binding.txtPath.text = binding.root.context.getString(
+                R.string.book_type_format,
+                type.name
+            )
+            val iconRes = when (type) {
                 BookType.EPUB -> android.R.drawable.ic_menu_recent_history
                 BookType.PDF -> android.R.drawable.ic_menu_agenda
                 BookType.TXT -> android.R.drawable.ic_menu_edit

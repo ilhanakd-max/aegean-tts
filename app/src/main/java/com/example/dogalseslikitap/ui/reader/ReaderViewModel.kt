@@ -5,19 +5,21 @@ import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.BackgroundColorSpan
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dogalseslikitap.R
 import com.example.dogalseslikitap.data.BookRepository
 import com.example.dogalseslikitap.data.SettingsRepository
 import com.example.dogalseslikitap.data.db.BookEntity
-import com.example.dogalseslikitap.tts.TtsProvider
 import com.example.dogalseslikitap.tts.TtsSettings
 import com.example.dogalseslikitap.util.BookContentLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -34,12 +36,22 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     private val _progressText = MutableStateFlow("")
     val progressText: StateFlow<String> = _progressText
 
-    private val _currentSettings = MutableStateFlow(TtsSettings())
-    val currentSettings: StateFlow<TtsSettings> = _currentSettings
-
     private var book: BookEntity? = null
     private var sentences: List<String> = emptyList()
+    private var ranges: List<IntRange> = emptyList()
+    private var normalizedText: String = ""
     private var currentIndex = 0
+
+    val currentSettings: StateFlow<TtsSettings> = settingsRepository.settingsFlow
+        .map { prefs ->
+            TtsSettings(
+                enginePackage = prefs[SettingsRepository.KEY_ENGINE] ?: android.speech.tts.TextToSpeech.Engine.DEFAULT_ENGINE,
+                voiceName = prefs[SettingsRepository.KEY_VOICE] ?: "",
+                speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
+                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
 
     fun loadBook(bookId: Long) {
         viewModelScope.launch {
@@ -47,48 +59,50 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             book?.let { entity ->
                 _bookTitle.value = entity.title
                 currentIndex = entity.lastPosition
-                loadSettings()
                 val text = withContext(Dispatchers.IO) {
                     val uri = Uri.parse(entity.path)
                     val mime = getApplication<Application>().contentResolver.getType(uri)
                     BookContentLoader.loadText(getApplication(), uri, mime)
                 }
-                sentences = text.split(Regex("(?<=[.!?])"))
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                updateContent()
+                parseText(text)
             }
         }
     }
 
-    private suspend fun loadSettings() {
-        val prefs = settingsRepository.settingsFlow.first()
-        _currentSettings.value = TtsSettings(
-            provider = TtsProvider.fromValue(prefs[SettingsRepository.KEY_PROVIDER]),
-            speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
-            pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f,
-            voice = prefs[SettingsRepository.KEY_VOICE] ?: "",
-            openAiKey = prefs[SettingsRepository.KEY_OPENAI_KEY] ?: "",
-            openAiBase = prefs[SettingsRepository.KEY_OPENAI_BASE] ?: "https://api.openai.com/",
-            azureKey = prefs[SettingsRepository.KEY_AZURE_KEY] ?: "",
-            azureRegion = prefs[SettingsRepository.KEY_AZURE_REGION] ?: "https://<region>.tts.speech.microsoft.com/"
-        )
+    private fun parseText(raw: String) {
+        normalizedText = raw.replace("\\s+".toRegex(), " ").trim()
+        if (normalizedText.isEmpty()) {
+            _content.value = SpannableString(getApplication<Application>().getString(R.string.empty_content))
+            _progressText.value = ""
+            sentences = emptyList()
+            ranges = emptyList()
+            return
+        }
+        val regex = Regex("[^.!?]+[.!?]?")
+        val matches = regex.findAll(normalizedText)
+            .mapNotNull {
+                val sentence = it.value.trim()
+                if (sentence.isEmpty()) null else sentence to it.range
+            }
+            .toList()
+        sentences = matches.map { it.first }
+        ranges = matches.map { it.second }
+        if (currentIndex >= sentences.size) currentIndex = sentences.lastIndex
+        updateContent()
     }
 
     private fun updateContent() {
-        if (sentences.isEmpty()) {
+        if (sentences.isEmpty() || ranges.isEmpty()) {
             _content.value = SpannableString(getApplication<Application>().getString(R.string.empty_content))
             _progressText.value = ""
             return
         }
-        if (currentIndex >= sentences.size) currentIndex = sentences.lastIndex
-        val joined = sentences.joinToString(". ")
-        val spannable = SpannableString(joined)
-        val start = sentences.take(currentIndex).joinToString(". ").length + if (currentIndex > 0) 2 else 0
-        val end = start + sentences[currentIndex].length
-        val highlightColor = getApplication<Application>().getColor(R.color.md_theme_primary)
-        if (start in 0..spannable.length && end <= spannable.length) {
-            spannable.setSpan(BackgroundColorSpan(highlightColor), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val spannable = SpannableString(normalizedText)
+        val range = ranges.getOrElse(currentIndex) { ranges.last() }
+        val color = ContextCompat.getColor(getApplication(), R.color.md_theme_primary)
+        val end = (range.last + 1).coerceAtMost(spannable.length)
+        if (range.first in 0..spannable.length && end <= spannable.length) {
+            spannable.setSpan(BackgroundColorSpan(color), range.first, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         _content.value = spannable
         _progressText.value = getApplication<Application>().getString(
