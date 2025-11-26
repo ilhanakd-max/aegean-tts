@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.util.PDFBoxResourceLoader
 import io.documentnode.epub4j.domain.Resource
 import io.documentnode.epub4j.epub.EpubReader
 import org.jsoup.Jsoup
@@ -27,6 +28,7 @@ object BookContentLoader {
     }
 
     private fun loadPdf(context: Context, uri: Uri): String {
+        PDFBoxResourceLoader.init(context.applicationContext)
         return context.contentResolver.openInputStream(uri)?.use { inputStream ->
             PDDocument.load(inputStream).use { doc ->
                 val stripper = PDFTextStripper()
