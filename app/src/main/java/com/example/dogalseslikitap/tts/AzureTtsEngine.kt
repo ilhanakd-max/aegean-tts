@@ -3,6 +3,9 @@ package com.example.dogalseslikitap.tts
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -30,6 +33,7 @@ private interface AzureService {
  */
 class AzureTtsEngine(private val context: Context, endpoint: String) : TtsEngine {
     private val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     private val service: AzureService = Retrofit.Builder()
         .baseUrl(endpoint)
@@ -42,7 +46,7 @@ class AzureTtsEngine(private val context: Context, endpoint: String) : TtsEngine
         .create(AzureService::class.java)
 
     override fun speak(text: String, settings: TtsSettings, onDone: () -> Unit, onError: (Throwable) -> Unit) {
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch {
             try {
                 val ssml = """
                     <speak version='1.0' xml:lang='tr-TR'>
