@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Doğal Sesli Kitap Okuyucu</string>
+    <string name="library_title">Kütüphane</string>
+    <string name="add_book">Kitap Ekle</string>
+    <string name="settings">Ayarlar</string>
+    <string name="no_books">Henüz kitap eklemediniz.</string>
+    <string name="book_reader">Kitap Okuyucu</string>
+    <string name="play">Oynat</string>
+    <string name="pause">Duraklat</string>
+    <string name="stop">Durdur</string>
+    <string name="previous">Önceki</string>
+    <string name="next">Sonraki</string>
+    <string name="progress_format">%1$d / %2$d cümle</string>
+    <string name="tts_provider">TTS Sağlayıcı</string>
+    <string name="provider_system">Android Sistem TTS (Google)</string>
+    <string name="provider_openai">OpenAI TTS</string>
+    <string name="provider_azure">Microsoft Azure TTS</string>
+    <string name="tts_speed">Konuşma Hızı</string>
+    <string name="tts_pitch">Ses Perdesi</string>
+    <string name="test_voice">Test Sesi</string>
+    <string name="openai_key">OpenAI API Anahtarı</string>
+    <string name="openai_base">OpenAI Taban URL</string>
+    <string name="azure_key">Azure API Anahtarı</string>
+    <string name="azure_region">Azure Bölge/Endpoint</string>
+    <string name="sample_text">"Merhaba, bu Doğal Sesli Kitap Okuyucu uygulamasının test sesidir."</string>
+    <string name="warning_turkish_voice">Türkçe ses bulunamadı, lütfen sistem TTS ayarlarını kontrol edin.</string>
+    <string name="error_tts">Sesli okuma sırasında bir hata oluştu. Lütfen ayarlarınızı kontrol edin.</string>
+    <string name="saving">Kaydediliyor…</string>
+    <string name="position_info">Bölüm ilerlemesi</string>
+    <string name="book_progress">%1$s – %% %2$d tamamlandı</string>
+    <string name="empty_content">Bu dosyada metin bulunamadı.</string>
+    <string name="provider_title">Tercih edilen TTS motorunu seçiniz</string>
+    <string name="voice_type">Ses Türü (varsa)</string>
+    <string name="file_permission_rationale">Dosya seçebilmek için okuma iznine ihtiyacımız var.</string>
+    <string name="permission_granted">İzin verildi</string>
+    <string name="permission_denied">İzin reddedildi</string>
+</resources>
