@@ -16,12 +16,16 @@ private val Context.dataStore by preferencesDataStore(name = "reader_settings")
  */
 class SettingsRepository(private val context: Context) {
     companion object {
-        val KEY_PROVIDER = preferencesKey<String>("tts_provider")
+        // Provider MUST use stringPreferencesKey, not preferencesKey
+        val KEY_PROVIDER = stringPreferencesKey("tts_provider")
+
         val KEY_SPEED = floatPreferencesKey("tts_speed")
         val KEY_PITCH = floatPreferencesKey("tts_pitch")
         val KEY_VOICE = stringPreferencesKey("tts_voice")
+
         val KEY_OPENAI_KEY = stringPreferencesKey("openai_key")
         val KEY_OPENAI_BASE = stringPreferencesKey("openai_base")
+
         val KEY_AZURE_KEY = stringPreferencesKey("azure_key")
         val KEY_AZURE_REGION = stringPreferencesKey("azure_region")
     }
