@@ -2,14 +2,11 @@ package com.example.dogalseslikitap.util
 
 import android.content.Context
 import android.net.Uri
-import com.mertakdut.Reader
-import com.mertakdut.exception.OutOfPagesException
-import com.mertakdut.BookSection
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.text.PDFTextStripper
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
+import org.jsoup.Jsoup
+import nl.siegmann.epublib.epub.EpubReader
+import java.io.InputStreamReader
 
 /**
  * Helper that converts selected book files to plain text for rendering and TTS.
@@ -39,44 +36,34 @@ object BookContentLoader {
     }
 
     private fun loadEpub(context: Context, uri: Uri): String {
-        val tempFile = copyToCache(context, uri, "temp_epub.epub")
-        val reader = Reader().apply {
-            setMaxContentPerSection(1500)
-            setIsIncludingTextContent(true)
-            setFullContent(tempFile.path)
-        }
-        val builder = StringBuilder()
-        var index = 0
-        var keepReading = true
-        while (keepReading) {
-            try {
-                val section: BookSection = reader.readSection(index)
-                builder.append(section.sectionTextContent).append("\n\n")
-                index++
-            } catch (e: OutOfPagesException) {
-                keepReading = false
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return ""
+        inputStream.use { stream ->
+            val book = EpubReader().readEpub(stream)
+            val builder = StringBuilder()
+            // Iterate in spine order to keep reading flow coherent
+            for (spineRef in book.spine.spineReferences) {
+                val resource = spineRef.resource
+                val textContent = readResourceText(resource)
+                if (textContent.isNotBlank()) {
+                    builder.append(textContent.trim()).append("\n\n")
+                }
             }
+            return builder.toString()
         }
-        return builder.toString()
     }
 
-    private fun copyToCache(context: Context, uri: Uri, name: String): File {
-        val file = File(context.cacheDir, name)
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(file).use { output ->
-                copyStream(input, output)
+    private fun readResourceText(resource: nl.siegmann.epublib.domain.Resource): String {
+        return try {
+            val encoding = resource.inputEncoding ?: "UTF-8"
+            resource.inputStream.use { resStream ->
+                InputStreamReader(resStream, encoding).use { reader ->
+                    val html = reader.readText()
+                    // Strip HTML tags to get plain text for display/TTS
+                    Jsoup.parse(html).text()
+                }
             }
-        }
-        return file
-    }
-
-    private fun copyStream(input: InputStream, output: FileOutputStream) {
-        val buffer = ByteArray(8 * 1024)
-        var length: Int
-        while (true) {
-            length = input.read(buffer)
-            if (length <= 0) break
-            output.write(buffer, 0, length)
+        } catch (e: Exception) {
+            ""
         }
     }
 }
