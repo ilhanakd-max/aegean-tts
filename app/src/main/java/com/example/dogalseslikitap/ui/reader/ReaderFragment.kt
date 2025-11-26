@@ -1,0 +1,79 @@
+package com.example.dogalseslikitap.ui.reader
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.example.dogalseslikitap.R
+import com.example.dogalseslikitap.databinding.FragmentReaderBinding
+import com.example.dogalseslikitap.tts.TtsManager
+import kotlinx.coroutines.launch
+
+class ReaderFragment : Fragment() {
+    private var _binding: FragmentReaderBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: ReaderViewModel by viewModels()
+    private lateinit var ttsManager: TtsManager
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentReaderBinding.inflate(inflater, container, false)
+        ttsManager = TtsManager(requireContext())
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val bookId = arguments?.getLong("bookId") ?: 0L
+        viewModel.loadBook(bookId)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.bookTitle.collect { binding.txtTitle.text = it }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.content.collect { binding.txtContent.text = it }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.progressText.collect { binding.txtProgress.text = it }
+        }
+
+        binding.btnPlay.setOnClickListener { speakCurrent() }
+        binding.btnPause.setOnClickListener { /* Pausing handled by TTS engines that support it */ }
+        binding.btnStop.setOnClickListener { ttsManager.stop() }
+        binding.btnNext.setOnClickListener {
+            viewModel.nextSentence()
+            speakCurrent()
+        }
+        binding.btnPrev.setOnClickListener {
+            viewModel.previousSentence()
+            speakCurrent()
+        }
+    }
+
+    private fun speakCurrent() {
+        val text = viewModel.currentSentence()
+        if (text.isBlank()) {
+            Toast.makeText(requireContext(), getString(R.string.empty_content), Toast.LENGTH_SHORT).show()
+            return
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val settings = viewModel.currentSettings.value
+            ttsManager.speak(text, settings, onDone = {
+                viewModel.saveProgress()
+            }, onError = {
+                Toast.makeText(requireContext(), getString(R.string.error_tts), Toast.LENGTH_LONG).show()
+            })
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+}
