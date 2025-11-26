@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import okhttp3.logging.HttpLoggingInterceptor
@@ -33,6 +36,7 @@ data class OpenAiTtsRequest(
  */
 class OpenAiTtsEngine(private val context: Context, baseUrl: String) : TtsEngine {
     private val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     private val service: OpenAiService = Retrofit.Builder()
         .baseUrl(baseUrl)
@@ -47,7 +51,7 @@ class OpenAiTtsEngine(private val context: Context, baseUrl: String) : TtsEngine
 
     override fun speak(text: String, settings: TtsSettings, onDone: () -> Unit, onError: (Throwable) -> Unit) {
         // Network work must be executed outside main thread; caller handles coroutine context.
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch {
             try {
                 val response = service.tts("Bearer ${settings.openAiKey}", OpenAiTtsRequest(input = text))
                 val file = saveToFile(response)

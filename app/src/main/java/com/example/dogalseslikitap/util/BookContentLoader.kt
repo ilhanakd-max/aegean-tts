@@ -2,10 +2,11 @@ package com.example.dogalseslikitap.util
 
 import android.content.Context
 import android.net.Uri
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
+import io.documentnode.epub4j.domain.Resource
+import io.documentnode.epub4j.epub.EpubReader
 import org.jsoup.Jsoup
-import nl.siegmann.epublib.epub.EpubReader
 import java.io.InputStreamReader
 
 /**
@@ -26,13 +27,12 @@ object BookContentLoader {
     }
 
     private fun loadPdf(context: Context, uri: Uri): String {
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return ""
-        inputStream.use {
-            PDDocument.load(it).use { doc ->
+        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            PDDocument.load(inputStream).use { doc ->
                 val stripper = PDFTextStripper()
-                return stripper.getText(doc)
+                stripper.getText(doc)
             }
-        }
+        } ?: ""
     }
 
     private fun loadEpub(context: Context, uri: Uri): String {
@@ -52,7 +52,7 @@ object BookContentLoader {
         }
     }
 
-    private fun readResourceText(resource: nl.siegmann.epublib.domain.Resource): String {
+    private fun readResourceText(resource: Resource): String {
         return try {
             val encoding = resource.inputEncoding ?: "UTF-8"
             resource.inputStream.use { resStream ->
