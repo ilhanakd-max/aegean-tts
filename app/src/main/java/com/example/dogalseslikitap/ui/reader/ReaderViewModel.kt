@@ -45,7 +45,6 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     val currentSettings: StateFlow<TtsSettings> = settingsRepository.settingsFlow
         .map { prefs ->
             TtsSettings(
-                enginePackage = prefs[SettingsRepository.KEY_ENGINE] ?: android.speech.tts.TextToSpeech.Engine.DEFAULT_ENGINE,
                 voiceName = prefs[SettingsRepository.KEY_VOICE] ?: "",
                 speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
                 pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f
