@@ -31,6 +31,10 @@ class ReaderFragment : Fragment() {
         viewModel.loadBook(bookId)
 
         viewLifecycleOwner.lifecycleScope.launch {
+            ttsManager.initialize(requireContext())
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.bookTitle.collect { binding.txtTitle.text = it }
         }
         viewLifecycleOwner.lifecycleScope.launch {

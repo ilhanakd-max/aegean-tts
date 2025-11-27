@@ -106,6 +106,8 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
+
+        viewModel.refreshVoices()
     }
 
     private fun renderSettings(settings: TtsSettings) {
