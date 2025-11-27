@@ -10,21 +10,18 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.dogalseslikitap.R
 import com.example.dogalseslikitap.databinding.FragmentReaderBinding
-import com.example.dogalseslikitap.tts.TtsManager
 import kotlinx.coroutines.launch
 
 class ReaderFragment : Fragment() {
     private var _binding: FragmentReaderBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ReaderViewModel by viewModels()
-    private lateinit var ttsManager: TtsManager
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentReaderBinding.inflate(inflater, container, false)
-        ttsManager = TtsManager(requireContext())
         return binding.root
     }
 
@@ -44,8 +41,8 @@ class ReaderFragment : Fragment() {
         }
 
         binding.btnPlay.setOnClickListener { speakCurrent(false) }
-        binding.btnPause.setOnClickListener { ttsManager.stop() }
-        binding.btnStop.setOnClickListener { ttsManager.stop() }
+        binding.btnPause.setOnClickListener { viewModel.pauseSpeech() }
+        binding.btnStop.setOnClickListener { viewModel.stopSpeech() }
         binding.btnNext.setOnClickListener {
             viewModel.nextSentence()
             speakCurrent(true)
@@ -57,32 +54,18 @@ class ReaderFragment : Fragment() {
     }
 
     private fun speakCurrent(auto: Boolean) {
-        val text = viewModel.currentSentence()
-        if (text.isBlank()) {
-            Toast.makeText(requireContext(), getString(R.string.empty_content), Toast.LENGTH_SHORT).show()
-            return
-        }
         viewLifecycleOwner.lifecycleScope.launch {
-            val settings = viewModel.currentSettings.value
-            ttsManager.speak(
-                text,
-                settings,
-                onDone = {
-                    viewModel.saveProgress()
-                    if (auto) {
-                        viewModel.nextSentence()
-                    }
-                },
+            viewModel.speakCurrentSentence(
+                autoAdvance = auto,
                 onError = {
                     Toast.makeText(requireContext(), getString(R.string.error_tts), Toast.LENGTH_LONG).show()
-                }
+                },
             )
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        ttsManager.shutdown()
         _binding = null
     }
 }

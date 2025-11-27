@@ -12,6 +12,7 @@ import com.example.dogalseslikitap.R
 import com.example.dogalseslikitap.data.BookRepository
 import com.example.dogalseslikitap.data.SettingsRepository
 import com.example.dogalseslikitap.data.db.BookEntity
+import com.example.dogalseslikitap.tts.TtsManager
 import com.example.dogalseslikitap.tts.TtsSettings
 import com.example.dogalseslikitap.util.BookContentLoader
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ import kotlinx.coroutines.withContext
 class ReaderViewModel(application: Application) : AndroidViewModel(application) {
     private val bookRepository = BookRepository(application)
     private val settingsRepository = SettingsRepository(application)
+    private val ttsManager = TtsManager()
 
     private val _content = MutableStateFlow(SpannableString(""))
     val content: StateFlow<Spannable> = _content
@@ -45,13 +47,22 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     val currentSettings: StateFlow<TtsSettings> = settingsRepository.settingsFlow
         .map { prefs ->
             TtsSettings(
-                enginePackage = prefs[SettingsRepository.KEY_ENGINE] ?: android.speech.tts.TextToSpeech.Engine.DEFAULT_ENGINE,
-                voiceName = prefs[SettingsRepository.KEY_VOICE] ?: "",
-                speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
-                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f
+                selectedVoice = prefs[SettingsRepository.KEY_VOICE] ?: "",
+                rate = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
+                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f,
             )
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
+
+    init {
+        viewModelScope.launch {
+            ttsManager.initialize(getApplication())
+            applySettings(currentSettings.value)
+        }
+        viewModelScope.launch {
+            currentSettings.collect { applySettings(it) }
+        }
+    }
 
     fun loadBook(bookId: Long) {
         viewModelScope.launch {
@@ -108,7 +119,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         _progressText.value = getApplication<Application>().getString(
             R.string.progress_format,
             currentIndex + 1,
-            sentences.size
+            sentences.size,
         )
     }
 
@@ -130,11 +141,45 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     fun currentSentence(): String = sentences.getOrElse(currentIndex) { "" }
 
+    fun speakCurrentSentence(autoAdvance: Boolean, onError: (Throwable) -> Unit = {}) {
+        val text = currentSentence()
+        if (text.isBlank()) return
+        val settings = currentSettings.value
+        applySettings(settings)
+        ttsManager.speak(
+            text,
+            onDone = {
+                saveProgress()
+                if (autoAdvance) {
+                    nextSentence()
+                }
+            },
+            onError = onError,
+        )
+    }
+
+    fun stopSpeech() = ttsManager.stop()
+
+    fun pauseSpeech() = ttsManager.pause()
+
+    fun resumeSpeech() = ttsManager.resume()
+
     fun saveProgress() {
         viewModelScope.launch {
             book?.let {
                 bookRepository.updateBook(it.copy(lastPosition = currentIndex))
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsManager.shutdown()
+    }
+
+    private fun applySettings(settings: TtsSettings) {
+        ttsManager.setVoice(settings.selectedVoice)
+        ttsManager.setRate(settings.rate)
+        ttsManager.setPitch(settings.pitch)
     }
 }
