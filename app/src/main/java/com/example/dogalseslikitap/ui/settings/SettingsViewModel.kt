@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.dogalseslikitap.data.SettingsRepository
 import com.example.dogalseslikitap.tts.TtsManager
 import com.example.dogalseslikitap.tts.TtsSettings
-import com.example.dogalseslikitap.tts.VoiceOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,51 +15,67 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = SettingsRepository(application)
-    private val ttsManager = TtsManager(application)
+    private val ttsManager = TtsManager()
 
     val settings: StateFlow<TtsSettings> = repository.settingsFlow
         .map { prefs ->
             TtsSettings(
-                voiceName = prefs[SettingsRepository.KEY_VOICE] ?: "",
-                speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
-                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f
+                selectedVoice = prefs[SettingsRepository.KEY_VOICE] ?: "",
+                rate = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
+                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f,
             )
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TtsSettings())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
 
-    private val _voices = MutableStateFlow<List<VoiceOption>>(emptyList())
-    val voices: StateFlow<List<VoiceOption>> = _voices
+    private val _voices = MutableStateFlow<List<android.speech.tts.Voice>>(emptyList())
+    val voices: StateFlow<List<android.speech.tts.Voice>> = _voices
 
     private val _loadingVoices = MutableStateFlow(false)
     val loadingVoices: StateFlow<Boolean> = _loadingVoices
 
     init {
-        viewModelScope.launch { refreshVoices() }
-    }
-
-    fun save(settings: TtsSettings) {
         viewModelScope.launch {
-            repository.setString(SettingsRepository.KEY_VOICE, settings.voiceName)
-            repository.setFloat(SettingsRepository.KEY_SPEED, settings.speed)
-            repository.setFloat(SettingsRepository.KEY_PITCH, settings.pitch)
+            ttsManager.initialize(getApplication())
+            refreshVoices()
+            applyCurrentSettings()
         }
     }
 
     fun refreshVoices() {
         viewModelScope.launch {
             _loadingVoices.value = true
-            _voices.value = ttsManager.listVoices()
+            _voices.value = ttsManager.getVoices()
             _loadingVoices.value = false
         }
     }
 
+    fun save(settings: TtsSettings) {
+        viewModelScope.launch {
+            repository.setString(SettingsRepository.KEY_VOICE, settings.selectedVoice)
+            repository.setFloat(SettingsRepository.KEY_SPEED, settings.rate)
+            repository.setFloat(SettingsRepository.KEY_PITCH, settings.pitch)
+            ttsManager.setVoice(settings.selectedVoice)
+            ttsManager.setRate(settings.rate)
+            ttsManager.setPitch(settings.pitch)
+        }
+    }
+
     suspend fun testSpeech(text: String, settings: TtsSettings, onError: (Throwable) -> Unit) {
-        ttsManager.speak(
-            text = text,
-            settings = settings,
-            onDone = {},
-            onError = onError
-        )
+        ttsManager.setVoice(settings.selectedVoice)
+        ttsManager.setRate(settings.rate)
+        ttsManager.setPitch(settings.pitch)
+        try {
+            ttsManager.speak(text)
+        } catch (t: Throwable) {
+            onError(t)
+        }
+    }
+
+    private suspend fun applyCurrentSettings() {
+        val current = settings.value
+        ttsManager.setVoice(current.selectedVoice)
+        ttsManager.setRate(current.rate)
+        ttsManager.setPitch(current.pitch)
     }
 
     override fun onCleared() {

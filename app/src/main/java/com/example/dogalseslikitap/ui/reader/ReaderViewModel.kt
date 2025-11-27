@@ -45,9 +45,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     val currentSettings: StateFlow<TtsSettings> = settingsRepository.settingsFlow
         .map { prefs ->
             TtsSettings(
-                voiceName = prefs[SettingsRepository.KEY_VOICE] ?: "",
-                speed = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
-                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f
+                selectedVoice = prefs[SettingsRepository.KEY_VOICE] ?: "",
+                rate = prefs[SettingsRepository.KEY_SPEED] ?: 1.0f,
+                pitch = prefs[SettingsRepository.KEY_PITCH] ?: 1.0f,
             )
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
@@ -107,7 +107,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         _progressText.value = getApplication<Application>().getString(
             R.string.progress_format,
             currentIndex + 1,
-            sentences.size
+            sentences.size,
         )
     }
 
