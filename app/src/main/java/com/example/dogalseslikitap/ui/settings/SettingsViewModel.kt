@@ -1,6 +1,7 @@
 package com.example.dogalseslikitap.ui.settings
 
 import android.app.Application
+import android.speech.tts.Voice
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dogalseslikitap.data.SettingsRepository
@@ -27,8 +28,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
 
-    private val _voices = MutableStateFlow<List<android.speech.tts.Voice>>(emptyList())
-    val voices: StateFlow<List<android.speech.tts.Voice>> = _voices
+    private val _voices = MutableStateFlow<List<Voice>>(emptyList())
+    val voices: StateFlow<List<Voice>> = _voices
 
     private val _loadingVoices = MutableStateFlow(false)
     val loadingVoices: StateFlow<Boolean> = _loadingVoices
@@ -36,8 +37,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     init {
         viewModelScope.launch {
             ttsManager.initialize(getApplication())
-            refreshVoices()
             applyCurrentSettings()
+            refreshVoices()
         }
     }
 
@@ -54,16 +55,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             repository.setString(SettingsRepository.KEY_VOICE, settings.selectedVoice)
             repository.setFloat(SettingsRepository.KEY_SPEED, settings.rate)
             repository.setFloat(SettingsRepository.KEY_PITCH, settings.pitch)
-            ttsManager.setVoice(settings.selectedVoice)
-            ttsManager.setRate(settings.rate)
-            ttsManager.setPitch(settings.pitch)
+            applySettingsToManager(settings)
         }
     }
 
     suspend fun testSpeech(text: String, settings: TtsSettings, onError: (Throwable) -> Unit) {
-        ttsManager.setVoice(settings.selectedVoice)
-        ttsManager.setRate(settings.rate)
-        ttsManager.setPitch(settings.pitch)
+        applySettingsToManager(settings)
         try {
             ttsManager.speak(text)
         } catch (t: Throwable) {
@@ -71,11 +68,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private suspend fun applyCurrentSettings() {
+    private fun applySettingsToManager(settings: TtsSettings) {
+        ttsManager.setVoice(settings.selectedVoice)
+        ttsManager.setRate(settings.rate)
+        ttsManager.setPitch(settings.pitch)
+    }
+
+    private fun applyCurrentSettings() {
         val current = settings.value
-        ttsManager.setVoice(current.selectedVoice)
-        ttsManager.setRate(current.rate)
-        ttsManager.setPitch(current.pitch)
+        applySettingsToManager(current)
     }
 
     override fun onCleared() {

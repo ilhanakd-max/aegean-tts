@@ -24,10 +24,9 @@ class SystemTtsEngine(context: Context) : TtsEngine {
 
     override fun speak(text: String, settings: TtsSettings, onDone: () -> Unit, onError: (Throwable) -> Unit) {
         try {
-            tts?.setSpeechRate(settings.speed)
+            tts?.setSpeechRate(settings.rate)
             tts?.setPitch(settings.pitch)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "SPEECH_${System.currentTimeMillis()}")
-            // TextToSpeech does not notify completion easily without a listener; caller manages flow.
             onDone()
         } catch (e: Exception) {
             onError(e)

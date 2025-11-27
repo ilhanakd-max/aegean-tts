@@ -12,6 +12,7 @@ import com.example.dogalseslikitap.R
 import com.example.dogalseslikitap.data.BookRepository
 import com.example.dogalseslikitap.data.SettingsRepository
 import com.example.dogalseslikitap.data.db.BookEntity
+import com.example.dogalseslikitap.tts.TtsManager
 import com.example.dogalseslikitap.tts.TtsSettings
 import com.example.dogalseslikitap.util.BookContentLoader
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ import kotlinx.coroutines.withContext
 class ReaderViewModel(application: Application) : AndroidViewModel(application) {
     private val bookRepository = BookRepository(application)
     private val settingsRepository = SettingsRepository(application)
+    private val ttsManager = TtsManager()
 
     private val _content = MutableStateFlow(SpannableString(""))
     val content: StateFlow<Spannable> = _content
@@ -51,6 +53,16 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             )
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, TtsSettings())
+
+    init {
+        viewModelScope.launch {
+            ttsManager.initialize(getApplication())
+            applySettings(currentSettings.value)
+        }
+        viewModelScope.launch {
+            currentSettings.collect { applySettings(it) }
+        }
+    }
 
     fun loadBook(bookId: Long) {
         viewModelScope.launch {
@@ -129,11 +141,45 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     fun currentSentence(): String = sentences.getOrElse(currentIndex) { "" }
 
+    fun speakCurrentSentence(autoAdvance: Boolean, onError: (Throwable) -> Unit = {}) {
+        val text = currentSentence()
+        if (text.isBlank()) return
+        val settings = currentSettings.value
+        applySettings(settings)
+        ttsManager.speak(
+            text,
+            onDone = {
+                saveProgress()
+                if (autoAdvance) {
+                    nextSentence()
+                }
+            },
+            onError = onError,
+        )
+    }
+
+    fun stopSpeech() = ttsManager.stop()
+
+    fun pauseSpeech() = ttsManager.pause()
+
+    fun resumeSpeech() = ttsManager.resume()
+
     fun saveProgress() {
         viewModelScope.launch {
             book?.let {
                 bookRepository.updateBook(it.copy(lastPosition = currentIndex))
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsManager.shutdown()
+    }
+
+    private fun applySettings(settings: TtsSettings) {
+        ttsManager.setVoice(settings.selectedVoice)
+        ttsManager.setRate(settings.rate)
+        ttsManager.setPitch(settings.pitch)
     }
 }

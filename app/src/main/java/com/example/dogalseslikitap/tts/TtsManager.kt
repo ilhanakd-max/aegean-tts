@@ -17,9 +17,10 @@ class TtsManager {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var tts: TextToSpeech? = null
     private var initialized = false
+
     private var rate: Float = 1.0f
     private var pitch: Float = 1.0f
-    private var selectedVoiceName: String? = null
+    private var selectedVoice: String? = null
 
     suspend fun initialize(context: Context) {
         if (initialized) return
@@ -27,13 +28,14 @@ class TtsManager {
         withContext(Dispatchers.Main) {
             if (initialized) return@withContext
             suspendCancellableCoroutine { cont ->
-                val ttsInstance = TextToSpeech(appContext) { status ->
+                val engine = TextToSpeech(appContext) { status ->
                     if (status == TextToSpeech.SUCCESS) {
-                        tts = ttsInstance
+                        tts = engine
                         initialized = true
-                        ttsInstance.setSpeechRate(rate)
-                        ttsInstance.setPitch(pitch)
-                        selectVoice(ttsInstance, selectedVoiceName)
+                        engine.language = Locale("tr", "TR")
+                        engine.setSpeechRate(rate)
+                        engine.setPitch(pitch)
+                        selectVoice(engine, selectedVoice)
                         cont.resume(Unit)
                     } else {
                         cont.resumeWithException(
@@ -41,41 +43,48 @@ class TtsManager {
                         )
                     }
                 }
-                cont.invokeOnCancellation { ttsInstance.shutdown() }
+                cont.invokeOnCancellation { engine.shutdown() }
             }
         }
     }
 
-    suspend fun speak(
+    fun speak(
         text: String,
         onDone: () -> Unit = {},
         onError: (Throwable) -> Unit = {},
     ) {
-        val engine = tts ?: throw IllegalStateException("TextToSpeech not initialized")
-        withContext(Dispatchers.Main) {
-            engine.setSpeechRate(rate)
-            engine.setPitch(pitch)
-            selectVoice(engine, selectedVoiceName)
-            val utteranceId = "offline_${System.currentTimeMillis()}"
-            engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) = Unit
+        val engine = tts ?: run {
+            onError(IllegalStateException("TextToSpeech not initialized"))
+            return
+        }
+        mainHandler.post {
+            try {
+                engine.setSpeechRate(rate)
+                engine.setPitch(pitch)
+                selectVoice(engine, selectedVoice)
+                val utteranceId = "offline_${System.currentTimeMillis()}"
+                engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
 
-                override fun onDone(utteranceId: String?) {
-                    mainHandler.post { onDone() }
-                }
+                    override fun onDone(utteranceId: String?) {
+                        mainHandler.post { onDone() }
+                    }
 
-                @Suppress("OVERRIDE_DEPRECATION")
-                override fun onError(utteranceId: String?) {
-                    mainHandler.post { onError(RuntimeException("TTS hatası")) }
-                }
+                    @Suppress("OVERRIDE_DEPRECATION")
+                    override fun onError(utteranceId: String?) {
+                        mainHandler.post { onError(RuntimeException("TTS hatası")) }
+                    }
 
-                override fun onError(utteranceId: String?, errorCode: Int) {
-                    mainHandler.post { onError(RuntimeException("TTS hatası: $errorCode")) }
+                    override fun onError(utteranceId: String?, errorCode: Int) {
+                        mainHandler.post { onError(RuntimeException("TTS hatası: $errorCode")) }
+                    }
+                })
+                val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                if (result == TextToSpeech.ERROR) {
+                    onError(RuntimeException("Metin okunamadı"))
                 }
-            })
-            val result = engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-            if (result == TextToSpeech.ERROR) {
-                onError(RuntimeException("Metin okunamadı"))
+            } catch (t: Throwable) {
+                onError(t)
             }
         }
     }
@@ -89,7 +98,7 @@ class TtsManager {
     }
 
     fun resume() {
-        // Android TextToSpeech does not support true resume; this is a no-op placeholder.
+        // Android TextToSpeech cannot resume mid-utterance; kept for API completeness.
     }
 
     fun setRate(rate: Float) {
@@ -103,13 +112,15 @@ class TtsManager {
     }
 
     fun setVoice(voiceName: String?) {
-        selectedVoiceName = voiceName
-        tts?.let { engine -> selectVoice(engine, voiceName) }
+        selectedVoice = voiceName
+        tts?.let { selectVoice(it, voiceName) }
     }
 
     fun getVoices(): List<Voice> {
         val voices = tts?.voices?.toList().orEmpty()
-        val turkish = voices.filter { it.locale?.language.equals(Locale("tr").language, ignoreCase = true) }
+        val turkish = voices.filter { voice ->
+            voice.locale?.language.equals(Locale("tr").language, ignoreCase = true)
+        }
         return if (turkish.isNotEmpty()) turkish else voices
     }
 
@@ -120,16 +131,11 @@ class TtsManager {
     }
 
     private fun selectVoice(engine: TextToSpeech, voiceName: String?) {
-        val targetVoice = when {
-            !voiceName.isNullOrBlank() -> engine.voices?.firstOrNull { it.name == voiceName }
-            else -> engine.voices?.firstOrNull { it.locale?.language.equals("tr", ignoreCase = true) }
+        val target = if (!voiceName.isNullOrBlank()) {
+            engine.voices?.firstOrNull { it.name == voiceName }
+        } else {
+            engine.voices?.firstOrNull { it.locale?.language.equals("tr", ignoreCase = true) }
         }
-        targetVoice?.let { engine.voice = it }
-    }
-
-    private fun selectVoice(engine: TextToSpeech, voiceName: String) {
-        val targetVoice = engine.voices?.firstOrNull { it.name == voiceName }
-            ?: engine.voices?.firstOrNull { it.locale?.language.equals("tr", ignoreCase = true) }
-        targetVoice?.let { engine.voice = it }
+        target?.let { engine.voice = it }
     }
 }
