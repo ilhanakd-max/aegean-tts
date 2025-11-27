@@ -126,4 +126,10 @@ class TtsManager {
         }
         targetVoice?.let { engine.voice = it }
     }
+
+    private fun selectVoice(engine: TextToSpeech, voiceName: String) {
+        val targetVoice = engine.voices?.firstOrNull { it.name == voiceName }
+            ?: engine.voices?.firstOrNull { it.locale?.language.equals("tr", ignoreCase = true) }
+        targetVoice?.let { engine.voice = it }
+    }
 }
