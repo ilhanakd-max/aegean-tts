@@ -2,9 +2,9 @@ package com.example.dogalseslikitap.util
 
 import android.content.Context
 import android.net.Uri
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
-import com.tom_roush.pdfbox.util.PDFBoxResourceLoader
 import io.documentnode.epub4j.domain.Resource
 import io.documentnode.epub4j.epub.EpubReader
 import org.jsoup.Jsoup

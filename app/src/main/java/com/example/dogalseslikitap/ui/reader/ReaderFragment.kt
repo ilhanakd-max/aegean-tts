@@ -17,14 +17,13 @@ class ReaderFragment : Fragment() {
     private var _binding: FragmentReaderBinding? = null
     private val binding get() = _binding!!
     private val viewModel: ReaderViewModel by viewModels()
-    private lateinit var ttsManager: TtsManager
+    private val ttsManager = TtsManager()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentReaderBinding.inflate(inflater, container, false)
-        ttsManager = TtsManager(requireContext())
         return binding.root
     }
 
@@ -32,6 +31,10 @@ class ReaderFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val bookId = arguments?.getLong("bookId") ?: 0L
         viewModel.loadBook(bookId)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            ttsManager.initialize(requireContext())
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.bookTitle.collect { binding.txtTitle.text = it }
@@ -64,9 +67,11 @@ class ReaderFragment : Fragment() {
         }
         viewLifecycleOwner.lifecycleScope.launch {
             val settings = viewModel.currentSettings.value
+            ttsManager.setRate(settings.rate)
+            ttsManager.setPitch(settings.pitch)
+            ttsManager.setVoice(settings.selectedVoice)
             ttsManager.speak(
                 text,
-                settings,
                 onDone = {
                     viewModel.saveProgress()
                     if (auto) {
@@ -75,7 +80,7 @@ class ReaderFragment : Fragment() {
                 },
                 onError = {
                     Toast.makeText(requireContext(), getString(R.string.error_tts), Toast.LENGTH_LONG).show()
-                }
+                },
             )
         }
     }
